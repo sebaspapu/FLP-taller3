@@ -143,3 +143,50 @@ Repositorio GitHub:
 (define scanner&parser
   (sllgen:make-string-parser especificacion-lexica especificacion-gramatical))
 
+
+; ============================================================
+; DATATYPE PARA PROCEDIMIENTOS (ProcVal)
+; Una cerradura guarda 3 cosas:
+;   1. lista-ID:  los nombres de los parámetros  ej: '(@x @y)
+;   2. exp:       el cuerpo (AST, sin evaluar)
+;   3. amb:       el ambiente donde fue DECLARADO
+; El ambiente capturado permite el alcance léxico (lexical scoping).
+; ============================================================
+
+(define-datatype procVal procVal?
+  (cerradura
+   (lista-ID (list-of symbol?))
+   (exp expresion?)
+   (amb ambiente?)
+   ))
+
+; ============================================================
+; DATATYPE PARA EL AMBIENTE
+; El ambiente es una pila de marcos (frames).
+; Cada marco asocia una lista de nombres con una lista de valores.
+; ============================================================
+
+(define-datatype ambiente ambiente?
+
+  ; Ambiente base: sin ninguna variable
+  (ambiente-vacio)
+
+  ; Extiende un ambiente con nuevas variables y sus valores
+  ; ids:  lista de símbolos, ej: '(@x @y)
+  ; vals: lista de valores,  ej: '(2 3)
+  ; amb-anterior: el ambiente que queda debajo
+  (ambiente-extendido
+   (ids  (list-of symbol?))
+   (vals (list-of scheme-value?))
+   (amb-anterior ambiente?))
+
+  ; Ambiente para recursión: el nombre de la función se ve a sí mismo
+  (ambiente-recursivo
+   (nombre symbol?)
+   (params (list-of symbol?))
+   (cuerpo expresion?)
+   (amb-anterior ambiente?))
+  )
+
+; Predicado auxiliar: cualquier valor de Scheme es aceptable
+(define scheme-value? (lambda (v) #t))
