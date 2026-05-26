@@ -19,23 +19,18 @@ Repositorio GitHub:
     ; Espacios y saltos de línea: se ignoran completamente
     (espacio-blanco (whitespace) skip)
 
-    ; Número negativo decimal:  -3.14
-    (numero-token (("-" (arbno digit) "." (arbno digit))) number)
-    ; Número negativo entero:   -5
-    (numero-token (("-" (arbno digit))) number)
-    ; Número positivo decimal:  3.14
-    (numero-token (((arbno digit) "." (arbno digit))) number)
-    ; Número positivo entero:   3
-    (numero-token (((arbno digit))) number)
+    ; Números: SLLGEN maneja enteros, decimales y negativos
+    ; automáticamente con el tipo "number"
+    (numero-token (digit (arbno digit)) number)
 
     ; Texto: empieza con letra, sigue con letras/dígitos/guión_bajo
     ; Las comillas NO van aquí, se manejan en la gramática
     ; Válidos: hola  FLP  mi_var2
-    (texto-token ((letter (arbno (or letter digit "_")))) string)
+    (texto-token (letter (arbno (or letter digit #\_))) string)
 
     ; Identificador: SIEMPRE empieza con @
     ; Válidos: @x  @suma  @mi_var
-    (identificador-token ("@" letter (arbno (or letter digit "_"))) symbol)
+    (identificador-token ("@" letter (arbno (or letter digit #\_))) symbol)
   ))
 
 ; ============================================================
@@ -133,3 +128,18 @@ Repositorio GitHub:
     (<primitiva-unaria> ("sub1")     primitiva-sub1)
     (<primitiva-unaria> ("neg")      primitiva-negacion-booleana)
   ))
+
+; ============================================================
+; CONSTRUCCIÓN DEL PARSER CON SLLGEN
+; sllgen genera automáticamente el scanner+parser a partir
+; de las especificaciones léxica y gramatical.
+; También genera los define-datatype de los nodos del AST.
+; ============================================================
+
+; Genera los datatypes: expresion, programa, primitiva-binaria, primitiva-unaria
+(sllgen:make-define-datatypes especificacion-lexica especificacion-gramatical)
+
+; Genera la función scanner&parser que convierte string -> AST
+(define scanner&parser
+  (sllgen:make-string-parser especificacion-lexica especificacion-gramatical))
+
