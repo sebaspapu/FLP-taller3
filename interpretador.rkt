@@ -156,8 +156,8 @@ Repositorio GitHub:
 (define-datatype procVal procVal?
   (cerradura
    (lista-ID (list-of symbol?))
-   (exp expresion?)
-   (amb ambiente?)
+   (exp (lambda (x) #t))       ; acepta cualquier valor como cuerpo
+   (amb (lambda (x) #t))       ; acepta cualquier valor como ambiente
    ))
 
 ; ============================================================
@@ -166,27 +166,24 @@ Repositorio GitHub:
 ; Cada marco asocia una lista de nombres con una lista de valores.
 ; ============================================================
 
+; Predicado auxiliar: cualquier valor de Scheme es aceptable
+(define scheme-value? (lambda (v) #t))
+
 (define-datatype ambiente ambiente?
 
   ; Ambiente base: sin ninguna variable
   (ambiente-vacio)
 
   ; Extiende un ambiente con nuevas variables y sus valores
-  ; ids:  lista de símbolos, ej: '(@x @y)
-  ; vals: lista de valores,  ej: '(2 3)
-  ; amb-anterior: el ambiente que queda debajo
   (ambiente-extendido
    (ids  (list-of symbol?))
    (vals (list-of scheme-value?))
-   (amb-anterior ambiente?))
+   (amb-anterior (lambda (x) #t)))   ; acepta cualquier ambiente
 
   ; Ambiente para recursión: el nombre de la función se ve a sí mismo
   (ambiente-recursivo
    (nombre symbol?)
    (params (list-of symbol?))
-   (cuerpo expresion?)
-   (amb-anterior ambiente?))
+   (cuerpo (lambda (x) #t))          ; acepta cualquier cuerpo
+   (amb-anterior (lambda (x) #t)))   ; acepta cualquier ambiente
   )
-
-; Predicado auxiliar: cualquier valor de Scheme es aceptable
-(define scheme-value? (lambda (v) #t))
