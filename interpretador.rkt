@@ -187,3 +187,52 @@ Repositorio GitHub:
    (cuerpo (lambda (x) #t))          ; acepta cualquier cuerpo
    (amb-anterior (lambda (x) #t)))   ; acepta cualquier ambiente
   )
+
+
+; ============================================================
+; ============================================================
+
+
+; ============================================================
+; AMBIENTE INICIAL
+; @a=1, @b=2, @c=3, @d="hola", @e="FLP"
+; ============================================================
+
+(define ambiente-inicial
+  (ambiente-extendido
+   '(@a  @b  @c  @d      @e)
+   '(1    2   3  "hola"  "FLP")
+   (ambiente-vacio)))
+
+; ============================================================
+; BUSCAR-VARIABLE
+; Recorre el ambiente buscando el identificador.
+; Retorna el valor si lo encuentra, error si no.
+; ============================================================
+
+(define buscar-variable
+  (lambda (id amb)
+    (cases ambiente amb
+
+      (ambiente-vacio ()
+        (eopl:error 'buscar-variable "Error, la variable ~s no existe" id))
+
+      (ambiente-extendido (ids vals amb-anterior)
+        (buscar-en-listas id ids vals amb-anterior))
+
+      (ambiente-recursivo (nombre params cuerpo amb-anterior)
+        (if (equal? id nombre)
+            (cerradura params cuerpo amb)
+            (buscar-variable id amb-anterior)))
+      )))
+
+(define buscar-en-listas
+  (lambda (id ids vals amb-anterior)
+    (cond
+      ((null? ids)
+       (buscar-variable id amb-anterior))
+      ((equal? id (car ids))
+       (car vals))
+      (else
+       (buscar-en-listas id (cdr ids) (cdr vals) amb-anterior))
+      )))
