@@ -236,3 +236,58 @@ Repositorio GitHub:
       (else
        (buscar-en-listas id (cdr ids) (cdr vals) amb-anterior))
       )))
+
+
+; ============================================================
+; ============================================================
+
+; ============================================================
+; VALOR-VERDAD?
+; 0 = falso, cualquier otro número = verdadero
+; ============================================================
+
+(define valor-verdad?
+  (lambda (val)
+    (not (= val 0))))
+
+; ============================================================
+; EVALUAR PRIMITIVA BINARIA
+; En #lang eieo las primitivas son símbolos, se comparan con equal?
+; ============================================================
+
+(define evaluar-primitiva-binaria
+  (lambda (prim val1 val2)
+    (cond
+      ((equal? prim 'primitiva-suma)            (+ val1 val2))
+      ((equal? prim 'primitiva-resta)           (- val1 val2))
+      ((equal? prim 'primitiva-div)
+       (if (= val2 0)
+           (eopl:error 'evaluar-primitiva-binaria "División por cero")
+           (/ val1 val2)))
+      ((equal? prim 'primitiva-multi)           (* val1 val2))
+      ((equal? prim 'primitiva-concat)          (string-append val1 val2))
+      ((equal? prim 'primitiva-mayor)           (if (> val1 val2)          1 0))
+      ((equal? prim 'primitiva-menor)           (if (< val1 val2)          1 0))
+      ((equal? prim 'primitiva-mayor-igual)     (if (>= val1 val2)         1 0))
+      ((equal? prim 'primitiva-menor-igual)     (if (<= val1 val2)         1 0))
+      ((equal? prim 'primitiva-diferente)       (if (not (equal? val1 val2)) 1 0))
+      ((equal? prim 'primitiva-comparador-igual)(if (equal? val1 val2)     1 0))
+      (else (eopl:error 'evaluar-primitiva-binaria "Primitiva desconocida: ~s" prim))
+      )))
+
+; ============================================================
+; EVALUAR PRIMITIVA UNARIA
+; ============================================================
+
+(define evaluar-primitiva-unaria
+  (lambda (prim val)
+    (cond
+      ((equal? prim 'primitiva-longitud)
+       (if (string? val)
+           (string-length val)
+           (eopl:error 'primitiva-longitud "Esperaba string, recibió: ~s" val)))
+      ((equal? prim 'primitiva-add1)              (+ val 1))
+      ((equal? prim 'primitiva-sub1)              (- val 1))
+      ((equal? prim 'primitiva-negacion-booleana) (if (valor-verdad? val) 0 1))
+      (else (eopl:error 'evaluar-primitiva-unaria "Primitiva desconocida: ~s" prim))
+      )))
