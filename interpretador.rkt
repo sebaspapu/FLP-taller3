@@ -18,128 +18,161 @@ Repositorio GitHub:
   '(
     ; Espacios y saltos de línea: se ignoran completamente
     (espacio-blanco (whitespace) skip)
-
-    ; Números: SLLGEN maneja enteros, decimales y negativos
-    ; automáticamente con el tipo "number"
+ 
+    ; Números enteros positivos (los negativos se manejan con ~)
     (numero-token (digit (arbno digit)) number)
-
-    ; Texto: empieza con letra, sigue con letras/dígitos/guión_bajo
-    ; Las comillas NO van aquí, se manejan en la gramática
-    ; Válidos: hola  FLP  mi_var2
-    (texto-token (letter (arbno (or letter digit #\_))) string)
-
-    ; Identificador: SIEMPRE empieza con @
+ 
+    ; Identificador: siempre empieza con @
     ; Válidos: @x  @suma  @mi_var
-    (identificador-token ("@" letter (arbno (or letter digit #\_))) symbol)
+    (identificador-token ("@" letter (arbno (or letter digit "_"))) symbol)
+ 
+    ; Texto entre comillas dobles
+    ; Válidos: "hola"  "FLP"  "mi texto"
+    (texto-token ("\"" (arbno (or letter digit " " "_" "!" "?" "." "," "-")) "\"") string)
   ))
 
 ; ============================================================
 ; ESPECIFICACIÓN GRAMATICAL
-; Aqui defino cómo se combinan los tokens para formar expresiones.
+; Aqui defino cómo se combinan los tokens para formar expressiones.
 ; Cada regla produce un nodo del AST (árbol sintáctico abstracto).
 ; ============================================================
+
 
 (define especificacion-gramatical
   '(
     ; PROGRAMA RAÍZ: un programa es una expresión
-    (<programa>
-     (<expresion>)
-     un-programa)
-
-    ; NÚMERO LITERAL: cualquier número del lexer
-    (<expresion>
+    (<program>
+     (<expression>)
+     un-program)
+ 
+    ; NÚMERO LITERAL
+    (<expression>
      (numero-token)
      numero-lit)
-
+ 
     ; TEXTO LITERAL: entre comillas dobles
-    ; El lexer ya extrajo el contenido sin comillas (texto-token)
-    (<expresion>
-     ("\"" texto-token "\"")
+    (<expression>
+     (texto-token)
      texto-lit)
-
+ 
     ; VARIABLE: identificador que empieza con @
-    (<expresion>
+    (<expression>
      (identificador-token)
      var-exp)
-
+ 
     ; OPERACIÓN BINARIA INFIJA: (exp1 OP exp2)
     ; Ejemplo: (3 + 4)  (@x ~ 2)  (@d concat @e)
-    (<expresion>
-     ("(" <expresion> <primitiva-binaria> <expresion> ")")
+    (<expression>
+     ("(" <expression> <primitiva_binaria> <expression> ")")
      primapp-bin-exp)
-
+ 
     ; OPERACIÓN UNARIA PREFIJA: OP(exp)
     ; Ejemplo: longitud(@d)  add1(3)  neg(0)
-    (<expresion>
-     (<primitiva-unaria> "(" <expresion> ")")
+    (<expression>
+     (<primitiva_unaria> "(" <expression> ")")
      primapp-un-exp)
-
-    ; CONDICIONAL (punto 4)
-    ; Si <cond> { <verdadero> } sino { <falso> }
-    (<expresion>
-     ("Si" <expresion> "{" <expresion> "}" "sino" "{" <expresion> "}")
+ 
+    ; CONDICIONAL: Si <cond> { <verdadero> } sino { <falso> }
+    (<expression>
+     ("Si" <expression> "{" <expression> "}" "sino" "{" <expression> "}")
      condicional-exp)
-
-    ; VARIABLES LOCALES (punto 5)
-    ; declarar (@x=2; @y=3;) { cuerpo }
-    ; arbno = cero o más repeticiones del patrón
-    (<expresion>
-     ("declarar" "(" (arbno identificador-token "=" <expresion> ";") ")" "{" <expresion> "}")
+ 
+    ; VARIABLES LOCALES: declarar (@x=2; @y=3;) { cuerpo }
+    (<expression>
+     ("declarar" "(" (arbno identificador-token "=" <expression> ";") ")" "{" <expression> "}")
      variableLocal-exp)
-
-    ; PROCEDIMIENTO / LAMBDA (punto 6)
-    ; procedimiento (@x, @y) { cuerpo }
-    ; separated-list = lista separada por comas
-    (<expresion>
-     ("procedimiento" "(" (separated-list identificador-token ",") ")" "{" <expresion> "}")
+ 
+    ; PROCEDIMIENTO / LAMBDA: procedimiento (@x, @y) { cuerpo }
+    (<expression>
+     ("procedimiento" "(" (separated-list identificador-token ",") ")" "{" <expression> "}")
      procedimiento-exp)
-
-    ; APLICACIÓN / LLAMADO (punto 7)
-    ; evaluar @f (arg1, arg2) finEval
-    (<expresion>
-     ("evaluar" <expresion> "(" (separated-list <expresion> ",") ")" "finEval")
+ 
+    ; APLICACIÓN: evaluar @f (arg1, arg2) finEval
+    (<expression>
+     ("evaluar" <expression> "(" (separated-list <expression> ",") ")" "finEval")
      app-exp)
-
-    ; RECURSIÓN (punto 8)
-    ; recursivo @nombre (@params) = { cuerpo } en { uso }
-    (<expresion>
+ 
+    ; RECURSIÓN: recursivo @nombre (@params) = { cuerpo } en { uso }
+    (<expression>
      ("recursivo" identificador-token
       "(" (separated-list identificador-token ",") ")"
-      "=" "{" <expresion> "}"
-      "en" "{" <expresion> "}")
+      "=" "{" <expression> "}"
+      "en" "{" <expression> "}")
      letrec-exp)
-
+ 
     ; ---- PRIMITIVAS BINARIAS ----
-    (<primitiva-binaria> ("+")      primitiva-suma)
-    (<primitiva-binaria> ("~")      primitiva-resta)       ; ~ para restar
-    (<primitiva-binaria> ("/")      primitiva-div)
-    (<primitiva-binaria> ("*")      primitiva-multi)
-    (<primitiva-binaria> ("concat") primitiva-concat)      ; concatenar strings
-    (<primitiva-binaria> (">")      primitiva-mayor)
-    (<primitiva-binaria> ("<")      primitiva-menor)
-    (<primitiva-binaria> (">=")     primitiva-mayor-igual)
-    (<primitiva-binaria> ("<=")     primitiva-menor-igual)
-    (<primitiva-binaria> ("!=")     primitiva-diferente)
-    (<primitiva-binaria> ("==")     primitiva-comparador-igual)
-
+    (<primitiva_binaria> ("+")      primitiva-suma)
+    (<primitiva_binaria> ("~")      primitiva-resta)
+    (<primitiva_binaria> ("/")      primitiva-div)
+    (<primitiva_binaria> ("*")      primitiva-multi)
+    (<primitiva_binaria> ("concat") primitiva-concat)
+    (<primitiva_binaria> (">")      primitiva-mayor)
+    (<primitiva_binaria> ("<")      primitiva-menor)
+    (<primitiva_binaria> (">=")     primitiva-mayor-igual)
+    (<primitiva_binaria> ("<=")     primitiva-menor-igual)
+    (<primitiva_binaria> ("!=")     primitiva-diferente)
+    (<primitiva_binaria> ("==")     primitiva-comparador-igual)
+ 
     ; ---- PRIMITIVAS UNARIAS ----
-    (<primitiva-unaria> ("longitud") primitiva-longitud)
-    (<primitiva-unaria> ("add1")     primitiva-add1)
-    (<primitiva-unaria> ("sub1")     primitiva-sub1)
-    (<primitiva-unaria> ("neg")      primitiva-negacion-booleana)
+    (<primitiva_unaria> ("longitud") primitiva-longitud)
+    (<primitiva_unaria> ("add1")     primitiva-add1)
+    (<primitiva_unaria> ("sub1")     primitiva-sub1)
+    (<primitiva_unaria> ("neg")      primitiva-negacion-booleana)
   ))
 
 ; ============================================================
-; CONSTRUCCIÓN DEL PARSER CON SLLGEN
-; sllgen genera automáticamente el scanner+parser a partir
-; de las especificaciones léxica y gramatical.
-; También genera los define-datatype de los nodos del AST.
+; DATATYPES MANUALES
+; Se definen manualmente porque sllgen:make-define-datatypes
+; no funciona correctamente en Racket 9.0 con #lang racket.
+; El parser sllgen sí funciona correctamente.
 ; ============================================================
 
-; Genera los datatypes: expresion, programa, primitiva-binaria, primitiva-unaria
-(sllgen:make-define-datatypes especificacion-lexica especificacion-gramatical)
+; Genera los datatypes: expression, programa, primitiva-binaria, primitiva-unaria
+; Datatype para primitivas binarias: cada variante representa un operador
+(define-datatype primitiva_binaria primitiva_binaria?
+  (primitiva-suma)
+  (primitiva-resta)
+  (primitiva-div)
+  (primitiva-multi)
+  (primitiva-concat)
+  (primitiva-mayor)
+  (primitiva-menor)
+  (primitiva-mayor-igual)
+  (primitiva-menor-igual)
+  (primitiva-diferente)
+  (primitiva-comparador-igual))
+ 
+; Datatype para primitivas unarias: cada variante representa un operador
+(define-datatype primitiva_unaria primitiva_unaria?
+  (primitiva-longitud)
+  (primitiva-add1)
+  (primitiva-sub1)
+  (primitiva-negacion-booleana)
+  (primitiva-piso))   ; convierte division exacta a entero
+ 
+; Datatype principal: cada variante es un tipo de nodo del AST
+(define-datatype expression expression?
+  (numero-lit        (n number?))
+  (texto-lit         (t string?))
+  (var-exp           (id symbol?))
+  (primapp-bin-exp   (exp1 expression?) (prim-bin primitiva_binaria?) (exp2 expression?))
+  (primapp-un-exp    (prim-un primitiva_unaria?) (exp1 expression?))
+  (condicional-exp   (test-exp expression?) (true-exp expression?) (false-exp expression?))
+  (variableLocal-exp (ids (list-of symbol?)) (exps (list-of expression?)) (cuerpo expression?))
+  (procedimiento-exp (ids (list-of symbol?)) (cuerpo expression?))
+  (app-exp           (fun-exp expression?) (arg-exps (list-of expression?)))
+  (letrec-exp        (nombre symbol?) (params (list-of symbol?)) (cuerpo-fun expression?) (cuerpo-en expression?))) 
 
-; Genera la función scanner&parser que convierte string -> AST
+; Datatype para el programa raíz
+(define-datatype program program?
+  (un-program (exp expression?)))
+
+; ============================================================
+; PARSER
+; Convierte un string en un AST usando las especificaciones
+; léxica y gramatical definidas arriba.
+; ============================================================
+ 
 (define scanner&parser
   (sllgen:make-string-parser especificacion-lexica especificacion-gramatical))
 
@@ -206,8 +239,9 @@ Repositorio GitHub:
 
 ; ============================================================
 ; BUSCAR-VARIABLE
-; Recorre el ambiente buscando el identificador.
-; Retorna el valor si lo encuentra, error si no.
+; Recorre el ambiente buscando el identificador dado.
+; Retorna el valor asociado si lo encuentra.
+; Lanza error si la variable no existe en ningún marco.
 ; ============================================================
 
 (define buscar-variable
@@ -226,6 +260,7 @@ Repositorio GitHub:
             (buscar-variable id amb-anterior)))
       )))
 
+; Función auxiliar: recorre listas paralelas de ids y vals buscando id
 (define buscar-en-listas
   (lambda (id ids vals amb-anterior)
     (cond
@@ -255,39 +290,130 @@ Repositorio GitHub:
 ; En #lang eieo las primitivas son símbolos, se comparan con equal?
 ; ============================================================
 
+; REEMPLAZA evaluar-primitiva-binaria con esto:
 (define evaluar-primitiva-binaria
   (lambda (prim val1 val2)
-    (cond
-      ((equal? prim 'primitiva-suma)            (+ val1 val2))
-      ((equal? prim 'primitiva-resta)           (- val1 val2))
-      ((equal? prim 'primitiva-div)
-       (if (= val2 0)
-           (eopl:error 'evaluar-primitiva-binaria "División por cero")
-           (/ val1 val2)))
-      ((equal? prim 'primitiva-multi)           (* val1 val2))
-      ((equal? prim 'primitiva-concat)          (string-append val1 val2))
-      ((equal? prim 'primitiva-mayor)           (if (> val1 val2)          1 0))
-      ((equal? prim 'primitiva-menor)           (if (< val1 val2)          1 0))
-      ((equal? prim 'primitiva-mayor-igual)     (if (>= val1 val2)         1 0))
-      ((equal? prim 'primitiva-menor-igual)     (if (<= val1 val2)         1 0))
-      ((equal? prim 'primitiva-diferente)       (if (not (equal? val1 val2)) 1 0))
-      ((equal? prim 'primitiva-comparador-igual)(if (equal? val1 val2)     1 0))
-      (else (eopl:error 'evaluar-primitiva-binaria "Primitiva desconocida: ~s" prim))
-      )))
+    (cases primitiva_binaria prim
+      (primitiva-suma ()             (+ val1 val2))
+      (primitiva-resta ()            (- val1 val2))
+      (primitiva-div ()              (if (= val2 0)
+                                         (eopl:error 'evaluar-primitiva-binaria "Division por cero")
+                                         (quotient val1 val2)))  ; division entera
+      (primitiva-multi ()            (* val1 val2))
+      (primitiva-concat ()           (string-append val1 val2))
+      (primitiva-mayor ()            (if (> val1 val2)            1 0))
+      (primitiva-menor ()            (if (< val1 val2)            1 0))
+      (primitiva-mayor-igual ()      (if (>= val1 val2)           1 0))
+      (primitiva-menor-igual ()      (if (<= val1 val2)           1 0))
+      (primitiva-diferente ()        (if (not (equal? val1 val2)) 1 0))
+      (primitiva-comparador-igual () (if (equal? val1 val2)       1 0)))))
 
-; ============================================================
-; EVALUAR PRIMITIVA UNARIA
-; ============================================================
-
+; REEMPLAZA evaluar-primitiva-unaria con esto:
 (define evaluar-primitiva-unaria
   (lambda (prim val)
-    (cond
-      ((equal? prim 'primitiva-longitud)
-       (if (string? val)
-           (string-length val)
-           (eopl:error 'primitiva-longitud "Esperaba string, recibió: ~s" val)))
-      ((equal? prim 'primitiva-add1)              (+ val 1))
-      ((equal? prim 'primitiva-sub1)              (- val 1))
-      ((equal? prim 'primitiva-negacion-booleana) (if (valor-verdad? val) 0 1))
-      (else (eopl:error 'evaluar-primitiva-unaria "Primitiva desconocida: ~s" prim))
+    (cases primitiva_unaria prim
+      (primitiva-longitud ()
+        (if (string? val)
+            (string-length val)
+            (eopl:error 'primitiva-longitud "Esperaba string, recibio: ~s" val)))
+      (primitiva-add1 ()              (+ val 1))
+      (primitiva-sub1 ()              (- val 1))
+      (primitiva-negacion-booleana () (if (valor-verdad? val) 0 1))
+      (primitiva-piso ()              (inexact->exact (floor val))))))
+
+
+; ============================================================
+; ============================================================
+
+; ============================================================
+; APLICAR PROCEDIMIENTO
+; Extiende el ambiente de DECLARACIÓN (no el de llamada).
+; Eso es el alcance léxico.
+; ============================================================
+
+(define aplicar-procedimiento
+  (lambda (proc args)
+    (cases procVal proc
+      (cerradura (lista-ID cuerpo amb-declaracion)
+        (if (not (= (length lista-ID) (length args)))
+            (eopl:error 'aplicar-procedimiento
+              "Aridad incorrecta: esperaba ~s args, recibio ~s"
+              (length lista-ID) (length args))
+            (evaluar-expression
+             cuerpo
+             (ambiente-extendido lista-ID args amb-declaracion)))))))
+
+; ============================================================
+; EVALUADOR PRINCIPAL
+; Toma un nodo del AST y un ambiente, retorna un valor.
+; "cases" hace pattern matching sobre el datatype expression.
+; ============================================================
+
+(define evaluar-expression
+  (lambda (exp amb)
+    (cases expression exp
+
+      ; Número literal: retorna el número directamente
+      (numero-lit (n) n)
+
+      ; Texto literal: retorna el string directamente
+      (texto-lit (t) t)
+
+      ; Variable: busca en el ambiente
+      (var-exp (id)
+        (buscar-variable id amb))
+
+      ; Binaria: evalúa ambos lados, aplica operador
+      (primapp-bin-exp (exp1 prim-bin exp2)
+        (let ((val1 (evaluar-expression exp1 amb))
+              (val2 (evaluar-expression exp2 amb)))
+          (evaluar-primitiva-binaria prim-bin val1 val2)))
+
+      ; Unaria: evalúa el argumento, aplica operador
+      (primapp-un-exp (prim-un exp1)
+        (let ((val (evaluar-expression exp1 amb)))
+          (evaluar-primitiva-unaria prim-un val)))
+
+      ; Condicional: evalúa condición, escoge rama
+      (condicional-exp (test-exp true-exp false-exp)
+        (if (valor-verdad? (evaluar-expression test-exp amb))
+            (evaluar-expression true-exp  amb)
+            (evaluar-expression false-exp amb)))
+
+      ; Variables locales: evalúa las inicializaciones en el amb actual,
+      ; extiende el ambiente, evalúa el cuerpo
+      (variableLocal-exp (ids exps cuerpo)
+        (let ((vals (map (lambda (e) (evaluar-expression e amb)) exps)))
+          (evaluar-expression cuerpo
+                             (ambiente-extendido ids vals amb))))
+
+      ; Procedimiento: NO evalúa. Crea cerradura con ambiente actual.
+      (procedimiento-exp (ids cuerpo)
+        (cerradura ids cuerpo amb))
+
+      ; Aplicación: evalúa función y argumentos, llama aplicar-procedimiento
+      (app-exp (fun-exp arg-exps)
+        (let ((fun  (evaluar-expression fun-exp amb))
+              (args (map (lambda (e) (evaluar-expression e amb)) arg-exps)))
+          (if (procVal? fun)
+              (aplicar-procedimiento fun args)
+              (eopl:error 'app-exp "No es un procedimiento: ~s" fun))))
+
+      ; Recursión: crea ambiente-recursivo y evalúa el cuerpo-en
+      (letrec-exp (nombre params cuerpo-fun cuerpo-en)
+        (evaluar-expression
+         cuerpo-en
+         (ambiente-recursivo nombre params cuerpo-fun amb)))
       )))
+
+; ============================================================
+; FUNCIÓN PRINCIPAL: interpretar
+; Recibe un string, lo parsea y lo evalúa en el ambiente inicial.
+; Es el punto de entrada del interpretador.
+; ============================================================
+ 
+(define interpretar
+  (lambda (string)
+    (cases program (scanner&parser string)
+      (un-program (exp)
+        (evaluar-expression exp ambiente-inicial)))))
