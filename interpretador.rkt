@@ -439,6 +439,19 @@ Repositorio GitHub:
 ; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ;Pruebas genericas
 
+; pruebas
+; (interpretar "(4 + 6)") ; => 10
+; (interpretar "(10 ~ 3)") ; => 7
+; (interpretar "\"hola\"") ; => "hola"
+; (interpretar "(\"hola\" concat \"FLP\")") ; => "holaFLP"
+; (interpretar "@a") ; => 1
+; (interpretar "@e") ; => "FLP"
+; (interpretar "(6 <= 6)") ; => 1
+; (interpretar "(7 > 10)") ; => 0
+; (interpretar "Si (2+3) { 2 } sino { 3 }") ; => 2
+; (interpretar "declarar (@x=2;@y=3;) { (@x + @y) }") ; => 5
+; (interpretar "declarar (@f=procedimiento (@x,@y){ (@x + @y) };) {evaluar @f (2,3) finEval}") ; => 5
+
 
 ; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ;PROGRAMAS DEL PUNTO 9
@@ -576,7 +589,28 @@ en {
 ; modifica su salida agregando el prefijo "Hola:"
 ; evaluar @decorate() finEval -> "Hola:Jairo_y_Sebastian"
 
+#|
 
+(interpretar
+"
+declarar (
+  @integrantes = procedimiento () {
+    \"Jairo_y_Sebastian\"
+  };
+
+  @saludar = procedimiento (@f) {
+    procedimiento () {
+      (\"Hola:\" concat evaluar @f() finEval)
+    }
+  };
+
+  @decorate = evaluar @saludar(@integrantes) finEval;
+) {
+  evaluar @decorate() finEval
+}
+")
+
+|#
 
 ; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; F) Decorador con mensaje final
