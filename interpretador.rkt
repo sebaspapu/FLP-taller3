@@ -19,16 +19,35 @@ Repositorio GitHub:
     ; Espacios y saltos de línea: se ignoran completamente
     (espacio-blanco (whitespace) skip)
  
-    ; Números enteros positivos (los negativos se manejan con ~)
-    (numero-token (digit (arbno digit)) number)
+    ; Enteros positivos
+    (numero-token
+     (digit (arbno digit))
+     number)
+
+    ; Enteros negativos
+    (numero-token
+     ("-" digit (arbno digit))
+     number)
+
+    ;Decimales positivos
+    (numero-token
+     (digit (arbno digit) "." digit (arbno digit))
+     number)
+
+    ; Decimales negativos
+    (numero-token
+     ("-" digit (arbno digit) "." digit (arbno digit))
+     number)
  
     ; Identificador: siempre empieza con @
     ; Válidos: @x  @suma  @mi_var
     (identificador-token ("@" letter (arbno (or letter digit "_"))) symbol)
  
     ; Texto entre comillas dobles
-    ; Válidos: "hola"  "FLP"  "mi texto"
-    (texto-token ("\"" (arbno (or letter digit " " "_" "!" "?" "." "," "-")) "\"") string)
+    (texto-token
+     (letter (arbno (or letter digit "_" "!" "?" "." "," "-")))
+     string)
+    
   ))
 
 ; ============================================================
@@ -50,9 +69,9 @@ Repositorio GitHub:
      (numero-token)
      numero-lit)
  
-    ; TEXTO LITERAL: entre comillas dobles
+    ; Texto literal entre comillas
     (<expression>
-     (texto-token)
+     ("\"" texto-token "\"")
      texto-lit)
  
     ; VARIABLE: identificador que empieza con @
@@ -380,12 +399,26 @@ Repositorio GitHub:
             (evaluar-expression true-exp  amb)
             (evaluar-expression false-exp amb)))
 
-      ; Variables locales: evalúa las inicializaciones en el amb actual,
-      ; extiende el ambiente, evalúa el cuerpo
+      ; Variables locales:
+      ; Evalúa las declaraciones secuencialmente para permitir
+      ; closures correctos y alcance léxico.
       (variableLocal-exp (ids exps cuerpo)
-        (let ((vals (map (lambda (e) (evaluar-expression e amb)) exps)))
-          (evaluar-expression cuerpo
-                             (ambiente-extendido ids vals amb))))
+        (letrec
+            ((construir-ambiente
+              (lambda (ids-rest exps-rest amb-actual)
+                (if (null? ids-rest)
+                    amb-actual
+                    (let ((valor (evaluar-expression (car exps-rest) amb-actual)))
+                      (construir-ambiente
+                       (cdr ids-rest)
+                       (cdr exps-rest)
+                       (ambiente-extendido
+                        (list (car ids-rest))
+                        (list valor)
+                        amb-actual)))))))
+          (evaluar-expression
+           cuerpo
+           (construir-ambiente ids exps amb))))
 
       ; Procedimiento: NO evalúa. Crea cerradura con ambiente actual.
       (procedimiento-exp (ids cuerpo)
@@ -417,3 +450,4 @@ Repositorio GitHub:
     (cases program (scanner&parser string)
       (un-program (exp)
         (evaluar-expression exp ambiente-inicial)))))
+
