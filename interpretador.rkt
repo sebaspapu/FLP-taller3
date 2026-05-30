@@ -42,9 +42,11 @@ Repositorio GitHub:
     ; Válidos: @x  @suma  @mi_var
     (identificador-token ("@" letter (arbno (or letter digit "_"))) symbol)
  
-    ; Texto entre comillas dobles
+    ; texto-token captura solo el contenido entre comillas
+    ; las comillas son parte del patrón léxico (delimitadores),
+    ; el valor almacenado en el token es solo el texto interior
     (texto-token
-     ((or letter "_") (arbno (or letter digit "_" ":" "!" "?" "." "," "-")))
+     ("\"" (arbno (or letter digit "_" ":" "!" "?" "." "," "-" " ")) "\"")
      string)
     
   ))
@@ -69,9 +71,9 @@ Repositorio GitHub:
  
     ; Texto literal entre comillas
     (<expression>
-     ("\"" texto-token "\"")
+     (texto-token)
      texto-lit)
- 
+
     ; VARIABLE: identificador que empieza con @
     (<expression>
      (identificador-token)
@@ -365,8 +367,8 @@ Repositorio GitHub:
       ; Número literal: retorna el número directamente
       (numero-lit (n) n)
 
-      ; Texto literal: retorna el string directamente
-      (texto-lit (t) t)
+      ;  Texto literal: quita las comillas que el lexer incluye en el valor
+      (texto-lit (t)(substring t 1 (- (string-length t) 1)))
 
       ; Variable: busca en el ambiente
       (var-exp (id)
@@ -627,15 +629,17 @@ declarar (
   };
 
   @saludar = procedimiento (@f) {
-    procedimiento (@sufijo) {
-      ((\"Hola:\" concat evaluar @f() finEval) concat @sufijo)
+    procedimiento (@msg) {
+      ((\"Hola:\" concat evaluar @f() finEval) concat @msg)
     }
   };
 
   @decorate = evaluar @saludar(@integrantes) finEval;
 ) {
-  evaluar @decorate(\"_ProfesoresFLP\") finEval
+  evaluar @decorate(\"_EstudiantesFLP\") finEval
 }
 ")
+
+|#
 
 |#
