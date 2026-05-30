@@ -8,34 +8,51 @@ Repositorio GitHub:
  https://github.com/sebaspapu/FLP-taller3
 |#
 
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; ESPECIFICACIÓN LÉXICA
 ; Define los tokens (unidades mínimas) que reconoce el lenguaje.
 ; El scanner lee el texto de izquierda a derecha y agrupa caracteres.
-; ============================================================
 
 (define especificacion-lexica
   '(
     ; Espacios y saltos de línea: se ignoran completamente
     (espacio-blanco (whitespace) skip)
  
-    ; Números enteros positivos (los negativos se manejan con ~)
-    (numero-token (digit (arbno digit)) number)
+    ; Enteros positivos
+    (numero-token
+     (digit (arbno digit))
+     number)
+
+    ; Enteros negativos
+    (numero-token
+     ("-" digit (arbno digit))
+     number)
+
+    ;Decimales positivos
+    (numero-token
+     (digit (arbno digit) "." digit (arbno digit))
+     number)
+
+    ; Decimales negativos
+    (numero-token
+     ("-" digit (arbno digit) "." digit (arbno digit))
+     number)
  
     ; Identificador: siempre empieza con @
     ; Válidos: @x  @suma  @mi_var
     (identificador-token ("@" letter (arbno (or letter digit "_"))) symbol)
  
     ; Texto entre comillas dobles
-    ; Válidos: "hola"  "FLP"  "mi texto"
-    (texto-token ("\"" (arbno (or letter digit " " "_" "!" "?" "." "," "-")) "\"") string)
+    (texto-token
+    (letter (arbno (or letter digit "_" ":" "!" "?" "." "," "-")))
+    string)
+    
   ))
 
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; ESPECIFICACIÓN GRAMATICAL
 ; Aqui defino cómo se combinan los tokens para formar expressiones.
 ; Cada regla produce un nodo del AST (árbol sintáctico abstracto).
-; ============================================================
 
 
 (define especificacion-gramatical
@@ -50,9 +67,9 @@ Repositorio GitHub:
      (numero-token)
      numero-lit)
  
-    ; TEXTO LITERAL: entre comillas dobles
+    ; Texto literal entre comillas
     (<expression>
-     (texto-token)
+     ("\"" texto-token "\"")
      texto-lit)
  
     ; VARIABLE: identificador que empieza con @
@@ -120,12 +137,12 @@ Repositorio GitHub:
     (<primitiva_unaria> ("neg")      primitiva-negacion-booleana)
   ))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; DATATYPES MANUALES
 ; Se definen manualmente porque sllgen:make-define-datatypes
 ; no funciona correctamente en Racket 9.0 con #lang racket.
 ; El parser sllgen sí funciona correctamente.
-; ============================================================
 
 ; Genera los datatypes: expression, programa, primitiva-binaria, primitiva-unaria
 ; Datatype para primitivas binarias: cada variante representa un operador
@@ -167,24 +184,22 @@ Repositorio GitHub:
 (define-datatype program program?
   (un-program (exp expression?)))
 
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; PARSER
 ; Convierte un string en un AST usando las especificaciones
 ; léxica y gramatical definidas arriba.
-; ============================================================
  
 (define scanner&parser
   (sllgen:make-string-parser especificacion-lexica especificacion-gramatical))
 
 
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; DATATYPE PARA PROCEDIMIENTOS (ProcVal)
 ; Una cerradura guarda 3 cosas:
 ;   1. lista-ID:  los nombres de los parámetros  ej: '(@x @y)
 ;   2. exp:       el cuerpo (AST, sin evaluar)
 ;   3. amb:       el ambiente donde fue DECLARADO
 ; El ambiente capturado permite el alcance léxico (lexical scoping).
-; ============================================================
 
 (define-datatype procVal procVal?
   (cerradura
@@ -193,11 +208,12 @@ Repositorio GitHub:
    (amb (lambda (x) #t))       ; acepta cualquier valor como ambiente
    ))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; DATATYPE PARA EL AMBIENTE
 ; El ambiente es una pila de marcos (frames).
 ; Cada marco asocia una lista de nombres con una lista de valores.
-; ============================================================
+
 
 ; Predicado auxiliar: cualquier valor de Scheme es aceptable
 (define scheme-value? (lambda (v) #t))
@@ -222,14 +238,10 @@ Repositorio GitHub:
   )
 
 
-; ============================================================
-; ============================================================
 
-
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; AMBIENTE INICIAL
 ; @a=1, @b=2, @c=3, @d="hola", @e="FLP"
-; ============================================================
 
 (define ambiente-inicial
   (ambiente-extendido
@@ -237,12 +249,12 @@ Repositorio GitHub:
    '(1    2   3  "hola"  "FLP")
    (ambiente-vacio)))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; BUSCAR-VARIABLE
 ; Recorre el ambiente buscando el identificador dado.
 ; Retorna el valor asociado si lo encuentra.
 ; Lanza error si la variable no existe en ningún marco.
-; ============================================================
 
 (define buscar-variable
   (lambda (id amb)
@@ -273,22 +285,21 @@ Repositorio GitHub:
       )))
 
 
-; ============================================================
-; ============================================================
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; VALOR-VERDAD?
 ; 0 = falso, cualquier otro número = verdadero
-; ============================================================
 
 (define valor-verdad?
   (lambda (val)
-    (not (= val 0))))
+    (and (number? val) (not (= val 0)))))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; EVALUAR PRIMITIVA BINARIA
 ; En #lang eieo las primitivas son símbolos, se comparan con equal?
-; ============================================================
+
 
 ; REEMPLAZA evaluar-primitiva-binaria con esto:
 (define evaluar-primitiva-binaria
@@ -322,14 +333,11 @@ Repositorio GitHub:
       (primitiva-piso ()              (inexact->exact (floor val))))))
 
 
-; ============================================================
-; ============================================================
 
-; ============================================================
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; APLICAR PROCEDIMIENTO
 ; Extiende el ambiente de DECLARACIÓN (no el de llamada).
-; Eso es el alcance léxico.
-; ============================================================
+
 
 (define aplicar-procedimiento
   (lambda (proc args)
@@ -343,11 +351,12 @@ Repositorio GitHub:
              cuerpo
              (ambiente-extendido lista-ID args amb-declaracion)))))))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; EVALUADOR PRINCIPAL
 ; Toma un nodo del AST y un ambiente, retorna un valor.
 ; "cases" hace pattern matching sobre el datatype expression.
-; ============================================================
+
 
 (define evaluar-expression
   (lambda (exp amb)
@@ -380,12 +389,19 @@ Repositorio GitHub:
             (evaluar-expression true-exp  amb)
             (evaluar-expression false-exp amb)))
 
-      ; Variables locales: evalúa las inicializaciones en el amb actual,
-      ; extiende el ambiente, evalúa el cuerpo
+      ; Variables locales:
+      ; Evalúa las declaraciones secuencialmente para permitir
+      ; closures correctos y alcance léxico.
       (variableLocal-exp (ids exps cuerpo)
-        (let ((vals (map (lambda (e) (evaluar-expression e amb)) exps)))
-          (evaluar-expression cuerpo
-                             (ambiente-extendido ids vals amb))))
+      (let loop ((ids ids)
+             (exps exps)
+             (env amb))
+         (if (null? ids)
+           (evaluar-expression cuerpo env)
+           (let ((val (evaluar-expression (car exps) env)))
+             (loop (cdr ids)
+                (cdr exps)
+                (ambiente-extendido(list (car ids))(list val) env))))))
 
       ; Procedimiento: NO evalúa. Crea cerradura con ambiente actual.
       (procedimiento-exp (ids cuerpo)
@@ -397,7 +413,7 @@ Repositorio GitHub:
               (args (map (lambda (e) (evaluar-expression e amb)) arg-exps)))
           (if (procVal? fun)
               (aplicar-procedimiento fun args)
-              (eopl:error 'app-exp "No es un procedimiento: ~s" fun))))
+              (eopl:error 'app-exp "Error: intento de aplicar un no-procedimiento"))))
 
       ; Recursión: crea ambiente-recursivo y evalúa el cuerpo-en
       (letrec-exp (nombre params cuerpo-fun cuerpo-en)
@@ -406,14 +422,199 @@ Repositorio GitHub:
          (ambiente-recursivo nombre params cuerpo-fun amb)))
       )))
 
-; ============================================================
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 ; FUNCIÓN PRINCIPAL: interpretar
 ; Recibe un string, lo parsea y lo evalúa en el ambiente inicial.
 ; Es el punto de entrada del interpretador.
-; ============================================================
- 
+
+
 (define interpretar
   (lambda (string)
     (cases program (scanner&parser string)
       (un-program (exp)
         (evaluar-expression exp ambiente-inicial)))))
+
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+;Pruebas genericas
+
+; pruebas
+; (interpretar "(4 + 6)") ; => 10
+; (interpretar "(10 ~ 3)") ; => 7
+; (interpretar "\"hola\"") ; => "hola"
+; (interpretar "(\"hola\" concat \"FLP\")") ; => "holaFLP"
+; (interpretar "@a") ; => 1
+; (interpretar "@e") ; => "FLP"
+; (interpretar "(6 <= 6)") ; => 1
+; (interpretar "(7 > 10)") ; => 0
+; (interpretar "Si (2+3) { 2 } sino { 3 }") ; => 2
+; (interpretar "declarar (@x=2;@y=3;) { (@x + @y) }") ; => 5
+; (interpretar "declarar (@f=procedimiento (@x,@y){ (@x + @y) };) {evaluar @f (2,3) finEval}") ; => 5
+
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+;PROGRAMAS DEL PUNTO 9
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+; A) Procedimiento @sumarDigitos
+; Implementa la suma de dígitos de un número entero positivo usando recursión.
+; Prueba: evaluar @sumarDigitos(147) finEval -> 12
+#|
+
+(interpretar
+"
+recursivo @residuo10(@n)= {
+  Si (@n < 10) {
+    @n
+  } sino {
+    (@n ~ ((@n / 10) * 10))
+  }
+}
+en {
+  recursivo @cociente10(@n)= {
+    Si (@n < 10) {
+      0
+    } sino {
+      ((@n ~ (@n ~ ((@n / 10) * 10))) / 10)
+    }
+  }
+  en {
+    recursivo @sumarDigitos(@n)= {
+      Si (@n < 10) {
+        @n
+      } sino {
+        (evaluar @residuo10(@n) finEval +
+         evaluar @sumarDigitos(evaluar @cociente10(@n) finEval) finEval)
+      }
+    }
+    en {
+      evaluar @sumarDigitos(147) finEval
+    }
+  }
+}
+")
+
+|#
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+; B) Procedimiento @factorial
+; Calcula el factorial de un número n usando recursión.
+; Caso base: factorial(0) = 1
+; Caso recursivo: n * factorial(n-1)
+; Pruebas:
+; evaluar @factorial(5) finEval  -> 120
+; evaluar @factorial(10) finEval -> 3628800
+
+#|
+
+(interpretar
+"
+recursivo @factorial(@n)= {
+  Si (@n == 0) {
+    1
+  } sino {
+    (@n * evaluar @factorial((@n ~ 1)) finEval)
+  }
+}
+en {
+  evaluar @factorial(5) finEval
+}
+")
+
+
+
+(interpretar
+"
+recursivo @factorial(@n)= {
+  Si (@n == 0) {
+    1
+  } sino {
+    (@n * evaluar @factorial((@n ~ 1)) finEval)
+  }
+}
+en {
+  evaluar @factorial(10) finEval
+}
+")
+
+|#
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+; C) Procedimiento @potencia
+; evaluar @potencia(4,2) finEval -> 16
+
+#|
+
+(interpretar
+"
+recursivo @potencia(@base,@exponente)= {
+  Si (@exponente == 0) {
+    1
+  } sino {
+    (@base * evaluar @potencia(@base,(@exponente ~ 1)) finEval)
+  }
+}
+en {
+  evaluar @potencia(4,2) finEval
+}
+")
+
+|#
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+; D) Suma de rango
+; evaluar @sumaRango(2,5) finEval ->14
+
+#|
+
+(interpretar "
+   recursivo @sumaRango(@a,@b)= {
+      Si (@a == @b) {
+         @a
+      }sino {
+         (@a + evaluar @sumaRango((@a + 1), @b) finEval)
+      }
+   }
+   en {
+      evaluar @sumaRango(2,5) finEval
+   }
+")
+
+|#
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+
+; E) Decorador
+; @saludar recibe una función y retorna otra funcion que
+; modifica su salida agregando el prefijo "Hola:"
+; evaluar @decorate() finEval -> "Hola:Jairo_y_Sebastian"
+
+#|
+
+(interpretar
+"
+declarar (
+  @integrantes = procedimiento () {
+    \"Jairo_y_Sebastian\"
+  };
+
+  @saludar = procedimiento (@f) {
+    procedimiento () {
+      (\"Hola:\" concat evaluar @f() finEval)
+    }
+  };
+
+  @decorate = evaluar @saludar(@integrantes) finEval;
+) {
+  evaluar @decorate() finEval
+}
+")
+
+|#
+
+; °°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+; F) Decorador con mensaje final
+; evaluar @decorate("_ProfesoresFLP") finEval
+; debe retornar: "Hola:Jairo_y_Sebastian_EstudiantesFLP"
+
+
