@@ -44,8 +44,8 @@ Repositorio GitHub:
  
     ; Texto entre comillas dobles
     (texto-token
-    (letter (arbno (or letter digit "_" ":" "!" "?" "." "," "-")))
-    string)
+     ((or letter "_") (arbno (or letter digit "_" ":" "!" "?" "." "," "-")))
+     string)
     
   ))
 
@@ -617,4 +617,25 @@ declarar (
 ; evaluar @decorate("_ProfesoresFLP") finEval
 ; debe retornar: "Hola:Jairo_y_Sebastian_EstudiantesFLP"
 
+#|
 
+(interpretar
+"
+declarar (
+  @integrantes = procedimiento () {
+    \"Jairo_y_Sebastian\"
+  };
+
+  @saludar = procedimiento (@f) {
+    procedimiento (@sufijo) {
+      ((\"Hola:\" concat evaluar @f() finEval) concat @sufijo)
+    }
+  };
+
+  @decorate = evaluar @saludar(@integrantes) finEval;
+) {
+  evaluar @decorate(\"_ProfesoresFLP\") finEval
+}
+")
+
+|#
